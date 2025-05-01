@@ -1,0 +1,44 @@
+name: Sync Fork with Upstream
+
+on:
+  schedule:
+    - cron: '0 3 * * *' # daily at 03:00 UTC
+  workflow_dispatch:
+
+jobs:
+  rebase-upstream:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to push changes to the repository
+    env:
+      UPSTREAM_REPO: https://github.com/spritsail/fivem.git
+      BRANCH_NAME: ${{ github.ref_name }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Git user
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream remote
+        run: |
+          git remote add upstream ${{ env.UPSTREAM_REPO }}
+
+      - name: Fetch upstream
+        run: |
+          git fetch upstream --prune
+
+      - name: Merge at Merge-Commit (no Fast-Forward)
+        run: |
+          git checkout ${{ env.BRANCH_NAME }}
+          git merge upstream/${{ env.BRANCH_NAME }} --no-ff -m "Merge upstream changes into ${{ env.BRANCH_NAME }}"
+
+      - name: Push changes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git push origin ${{ env.BRANCH_NAME }}
