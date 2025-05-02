@@ -6,7 +6,7 @@ ARG FEX_VER=FEX-2504
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-FROM --platform=arm64 ubuntu:22.04 AS fex-builder
+FROM --platform=arm64 ubuntu:24.04 AS fex-builder
 
 ARG DEBIAN_FRONTEND
 
@@ -35,7 +35,7 @@ RUN ninja
 
 WORKDIR /FEX/build
 
-FROM ubuntu:22.04 AS fx-downloader
+FROM ubuntu:24.04 AS fx-downloader
 
 ARG DEBIAN_FRONTEND
 
@@ -55,7 +55,7 @@ RUN mkdir -p /opt/cfx-server \
 
 ADD server.cfg /opt/cfx-server-data
 
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 ARG DEBIAN_FRONTEND
 
