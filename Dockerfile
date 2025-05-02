@@ -13,7 +13,7 @@ ARG DEBIAN_FRONTEND
 ARG FEX_VER
 
 RUN apt update && apt install -y cmake \
-    clang-13 llvm-13 nasm ninja-build pkg-config \
+    clang-16 llvm-16 nasm ninja-build pkg-config \
     libcap-dev libglfw3-dev libepoxy-dev python3-dev libsdl2-dev \
     python3 linux-headers-generic  \
     git qtbase5-dev qtdeclarative5-dev lld \
@@ -28,8 +28,8 @@ RUN git clone \
     . && \
     mkdir build
 
-ARG CC=clang-13
-ARG CXX=clang++-13
+ARG CC=clang-16
+ARG CXX=clang++-16
 RUN cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DUSE_LINKER=lld -DENABLE_LTO=True -DBUILD_TESTS=False -DENABLE_ASSERTIONS=False -G Ninja .
 RUN ninja
 
