@@ -7,7 +7,10 @@ ARG FEX_BUILD=false
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-FROM debian:bookworm-slim AS main
+FROM ubuntu:22.04 AS main
+
+RUN sed -E -i 's#http://[^[:space:]]*ubuntu\.com/ubuntu-ports#http://mirrors.dotsrc.org/ubuntu-ports#g' /etc/apt/sources.list \
+&&  sed -E -i 's#http://[^[:space:]]*ubuntu\.com/ubuntu#http://mirrors.dotsrc.org/ubuntu#g'             /etc/apt/sources.list
 
 # --------------------------------------------------------------------------------
 
