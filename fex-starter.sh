@@ -80,20 +80,10 @@ fi
 
 check_kernel_version
 
-if ! grep -q -R "fex-emu" /etc/apt/sources.list* /etc/apt/sources.list.d/; then
-    echo "FEX-EMU PPA not found. Please ensure you have added the FEX-EMU PPA." >&2
-    echo "Use: sudo apt-get install software-properties-common" >&2
-    echo "     sudo add-apt-repository ppa:fex-emu/fex" >&2
-    exit 1
-fi
-
 # --------------------------------------------------------------------------------
 
 CPUFEAT=$(get_cpu_features_version | awk -F. '{print $2; exit}')
 echo "Detected CPU feature level: $CPUFEAT"
-
-echo "Updating package lists..."
-apt-get update
 
 case "$CPUFEAT" in
     0|1) FEX_EMU_ARCH_REV="fex-emu-armv8.0" ;;
@@ -109,13 +99,9 @@ esac
 
 echo "Using FEX package for architecture revision: $FEX_EMU_ARCH_REV"
 
-echo "Installing FEX packages..."
-NO_INSTALL_RECOMMENDS=${NO_INSTALL_RECOMMENDS:-0}
-apt-get install -y $( if [ "$NO_INSTALL_RECOMMENDS" = "1" ]; then echo "--no-install-recommends"; fi ) "$FEX_EMU_ARCH_REV"
+echo "Starting FEX..."
 
-echo "Cleaning up..."
-apt-get clean
-rm -rf /var/lib/apt/lists/*
+LD_LIBRARY_PATH="/opt/fex-emu/$FEX_EMU_ARCH_REV/lib:${LD_LIBRARY_PATH:-}"
+export LD_LIBRARY_PATH
 
-echo "FEX installation completed successfully."
-exit 0
+exec /opt/fex-emu/$FEX_EMU_ARCH_REV/bin/FEX "$@"
