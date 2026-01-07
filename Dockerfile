@@ -45,11 +45,56 @@ RUN if [ "$FEX_BUILD" = "true" ]; then \
 
 WORKDIR /FEX/Bin
 RUN if [ "$FEX_BUILD" != "true" ]; then \
-    touch dummy--fex-has-not-been-localy-built.txt; \
+    touch dummy--fex-has-not-been-locally-built.txt; \
     fi
 
 ARG TARGETARCH
 FROM fex-builder-${TARGETARCH} AS fex-builder
+
+# --------------------------------------------------------------------------------
+
+FROM main AS fex-installer-amd64
+
+FROM --platform=arm64 main AS fex-installer-arm64
+
+ARG DEBIAN_FRONTEND
+
+ARG FEX_BUILD
+ARG FEX_PACKAGES="fex-emu-armv8.0 fex-emu-armv8.2 fex-emu-armv8.4"
+
+RUN if [ "$FEX_BUILD" != "true" ]; then \
+    apt update \
+    && apt install -y --no-install-recommends \
+    software-properties-common \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gpg-agent \
+    && apt-get clean \
+    && add-apt-repository -y ppa:fex-emu/fex; \
+    fi
+
+WORKDIR /tmp
+
+RUN if [ "$FEX_BUILD" != "true" ]; then \
+    for pkg in $FEX_PACKAGES; do \
+        apt download $pkg; \
+        dpkg-deb -x $pkg* ./$pkg; \
+        mkdir -p /opt/fex-emu/$pkg/bin; \
+        mkdir -p /opt/fex-emu/$pkg/lib; \
+        cp -ra ./$pkg/usr/bin/* /opt/fex-emu/$pkg/bin; \
+        cp -ra ./$pkg/usr/lib/* /opt/fex-emu/$pkg/lib; \
+        rm -rf ./$pkg*; \
+        done; \
+    fi
+
+WORKDIR /opt/fex-emu/
+RUN if [ "$FEX_BUILD" = "true" ]; then \
+    touch dummy--fex-has-not-been-locally-installed.txt; \
+    fi
+
+ARG TARGETARCH
+FROM fex-installer-${TARGETARCH} AS fex-installer
 
 # --------------------------------------------------------------------------------
 
@@ -105,18 +150,6 @@ FROM --platform=arm64 main AS base-arm64
 ARG DEBIAN_FRONTEND
 ARG FEX_BUILD
 
-RUN if [ "$FEX_BUILD" != "true" ]; then \
-    apt update \
-    && apt install -y --no-install-recommends \
-    software-properties-common \
-    apt-transport-https \
-    ca-certificates \
-    curl \
-    gpg-agent \
-    && apt-get clean \
-    && add-apt-repository -y ppa:fex-emu/fex; \
-    fi
-
 RUN apt update \
     && apt install -y \
     curl \
@@ -139,6 +172,7 @@ RUN apt update \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY --from=fex-builder /FEX/Bin/* /usr/bin/
+COPY --from=fex-installer /opt/fex-emu /opt/fex-emu
 COPY --from=fex-rootfs /root/.fex-emu /root/.fex-emu
 
 ARG TARGETARCH
@@ -172,7 +206,9 @@ RUN mkdir /txData \
 ENV CFX_SERVER=/opt/cfx-server
 
 ADD --chmod=755 entrypoint /usr/bin/entrypoint
+
 ADD --chmod=755 fex-installer.sh /usr/local/bin/fex-installer.sh
+ADD --chmod=755 fex-starter.sh /usr/local/bin/fex-starter.sh
 
 WORKDIR /config
 EXPOSE 30120
