@@ -100,7 +100,7 @@ case "$CPUFEAT" in
     2|3) FEX_EMU_ARCH_REV="fex-emu-armv8.2" ;;
     4)   FEX_EMU_ARCH_REV="fex-emu-armv8.4" ;;
     *)
-        echo "Unsupported CPU revision: $CPUREV" >&2
+        echo "Unsupported CPU revision: $CPUFEAT" >&2
         exit 1
         ;;
 esac
