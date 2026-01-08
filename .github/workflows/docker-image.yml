@@ -8,13 +8,6 @@ on:
   schedule:
     - cron: '44 14 */3 * 2'
   workflow_dispatch:
-    inputs:
-      fex-source-build-test:
-        description: 'FEX Build from Source as Test?'
-        required: false
-        options: [ 'yes', 'no' ]
-        type: choice
-        default: 'no'
 
 concurrency:
   group: ${{ (github.event_name == 'pull_request') && github.workflow && '-' && github.event.pull_request.number || github.run_id }}
@@ -69,10 +62,6 @@ jobs:
           flavor: |
             latest=${{ github.ref_name == 'master' }}
 
-      - name: Set Build args into Dockerfile
-        if: ${{ github.event.inputs.fex-source-build-test == 'yes' }}
-        run: sed -i "s|ARG FEX_BUILD=.*|ARG FEX_BUILD=true|g" $GITHUB_WORKSPACE/Dockerfile
-
       - name: Build main Docker image
         id: prebuild
         uses: docker/build-push-action@v6
@@ -80,8 +69,8 @@ jobs:
           build-args: GH_TOKEN=${{ github.token }}
           context: .
           file: ./Dockerfile
-#         cache-to: ${{ github.event_name != 'pull_request' && 'type=gha,mode=max,ignore-error=true' || '' }}
-#         cache-from: ${{ github.event_name != 'pull_request' && 'type=gha' || '' }}
+          cache-to: ${{ github.event_name != 'pull_request' && 'type=gha,mode=max,ignore-error=true' || '' }}
+          cache-from: ${{ github.event_name != 'pull_request' && 'type=gha' || '' }}
           push: false
           load: true
           tags: ${{ steps.meta.outputs.tags }}
@@ -112,15 +101,14 @@ jobs:
 
       - name: Build and push main Docker image
         id: build
-        if: ${{ github.event.inputs.fex-source-build-test != 'yes' }}
         uses: docker/build-push-action@v6
         with:
           build-args: GH_TOKEN=${{ github.token }}
           context: .
           file: ./Dockerfile
           platforms: linux/amd64,linux/arm64
-#         cache-to: ${{ github.event_name != 'pull_request' && 'type=gha,mode=max,ignore-error=true' || '' }}
-#         cache-from: ${{ github.event_name != 'pull_request' && 'type=gha' || '' }}
+          cache-to: ${{ github.event_name != 'pull_request' && 'type=gha,mode=max,ignore-error=true' || '' }}
+          cache-from: ${{ github.event_name != 'pull_request' && 'type=gha' || '' }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
