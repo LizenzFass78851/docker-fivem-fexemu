@@ -101,7 +101,7 @@ echo "Using FEX package for architecture revision: $FEX_EMU_ARCH_REV"
 
 echo "Starting FEX..."
 
-LD_LIBRARY_PATH="/opt/fex-emu/$FEX_EMU_ARCH_REV/lib:${LD_LIBRARY_PATH:-}"
+LD_LIBRARY_PATH="$FEX_INSTALL_PATH/$FEX_EMU_ARCH_REV/lib:${LD_LIBRARY_PATH:-}"
 export LD_LIBRARY_PATH
 
-exec /opt/fex-emu/$FEX_EMU_ARCH_REV/bin/FEX "$@"
+exec $FEX_INSTALL_PATH/$FEX_EMU_ARCH_REV/bin/FEX "$@"
