@@ -4,6 +4,8 @@ ARG DATA_VER=0e7ba538339f7c1c26d0e689aa750a336576cf02
 
 ARG FEX_VER=FEX-2601
 ARG FEX_BUILD=false
+ARG FEX_PACKAGES="fex-emu-armv8.0 fex-emu-armv8.2 fex-emu-armv8.4"
+ARG FEX_INSTALL_PATH=/opt/fex-emu
 
 ARG DEBIAN_FRONTEND=noninteractive
 
@@ -24,7 +26,7 @@ ARG FEX_VER
 ARG FEX_BUILD
 
 RUN if [ "$FEX_BUILD" = "true" ]; then \
-    apt update && apt install -y cmake \
+    apt-get update && apt-get install -y cmake \
         clang-13 llvm-13 nasm ninja-build pkg-config \
         libcap-dev libglfw3-dev libepoxy-dev python3-dev libsdl2-dev \
         python3 linux-headers-generic  \
@@ -60,11 +62,12 @@ FROM --platform=arm64 main AS fex-installer-arm64
 ARG DEBIAN_FRONTEND
 
 ARG FEX_BUILD
-ARG FEX_PACKAGES="fex-emu-armv8.0 fex-emu-armv8.2 fex-emu-armv8.4"
+ARG FEX_PACKAGES
+ARG FEX_INSTALL_PATH
 
 RUN if [ "$FEX_BUILD" != "true" ]; then \
-    apt update \
-    && apt install -y --no-install-recommends \
+    apt-get update \
+    && apt-get install -y --no-install-recommends \
     software-properties-common \
     apt-transport-https \
     ca-certificates \
@@ -78,17 +81,17 @@ WORKDIR /tmp
 
 RUN if [ "$FEX_BUILD" != "true" ]; then \
     for pkg in $FEX_PACKAGES; do \
-        apt download $pkg; \
+        apt-get download $pkg; \
         dpkg-deb -x $pkg* ./$pkg; \
-        mkdir -p /opt/fex-emu/$pkg/bin; \
-        mkdir -p /opt/fex-emu/$pkg/lib; \
-        cp -ra ./$pkg/usr/bin/* /opt/fex-emu/$pkg/bin; \
-        cp -ra ./$pkg/usr/lib/* /opt/fex-emu/$pkg/lib; \
+        mkdir -p ${FEX_INSTALL_PATH}/$pkg/bin; \
+        mkdir -p ${FEX_INSTALL_PATH}/$pkg/lib; \
+        cp -ra ./$pkg/usr/bin/* ${FEX_INSTALL_PATH}/$pkg/bin; \
+        cp -ra ./$pkg/usr/lib/* ${FEX_INSTALL_PATH}/$pkg/lib; \
         rm -rf ./$pkg*; \
         done; \
     fi
 
-WORKDIR /opt/fex-emu/
+WORKDIR ${FEX_INSTALL_PATH}
 RUN if [ "$FEX_BUILD" = "true" ]; then \
     touch dummy--fex-has-not-been-locally-installed.txt; \
     fi
@@ -129,8 +132,8 @@ ARG DEBIAN_FRONTEND
 ARG FIVEM_VER
 ARG DATA_VER
 
-RUN apt update \
-    && apt install -y wget xz-utils \
+RUN apt-get update \
+    && apt-get install -y wget xz-utils \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /opt/cfx-server
@@ -149,9 +152,11 @@ FROM --platform=arm64 main AS base-arm64
 
 ARG DEBIAN_FRONTEND
 ARG FEX_BUILD
+ARG FEX_INSTALL_PATH
+ENV FEX_INSTALL_PATH=${FEX_INSTALL_PATH}
 
-RUN apt update \
-    && apt install -y \
+RUN apt-get update \
+    && apt-get install -y \
     curl \
     squashfuse \
     fuse3 \
@@ -171,8 +176,8 @@ RUN apt update \
     libstdc++6 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-COPY --from=fex-builder /FEX/Bin/* /usr/bin/
-COPY --from=fex-installer /opt/fex-emu /opt/fex-emu
+COPY --from=fex-builder /FEX/Bin /usr/local/bin
+COPY --from=fex-installer ${FEX_INSTALL_PATH} ${FEX_INSTALL_PATH}
 COPY --from=fex-rootfs /root/.fex-emu /root/.fex-emu
 
 ARG TARGETARCH
@@ -193,8 +198,8 @@ LABEL org.opencontainers.image.authors="" \
       io.spritsail.version.fivem=${FIVEM_VER} \
       io.spritsail.version.fivem_data=${DATA_VER}
 
-RUN apt update \
-    && apt install -y tini \
+RUN apt-get update \
+    && apt-get install -y tini \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY --from=fx-downloader /opt/cfx-server /opt/cfx-server
@@ -206,8 +211,6 @@ RUN mkdir /txData \
 ENV CFX_SERVER=/opt/cfx-server
 
 ADD --chmod=755 entrypoint /usr/bin/entrypoint
-
-ADD --chmod=755 fex-installer.sh /usr/local/bin/fex-installer.sh
 ADD --chmod=755 fex-starter.sh /usr/local/bin/fex-starter.sh
 
 WORKDIR /config
