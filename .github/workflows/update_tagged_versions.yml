@@ -47,33 +47,6 @@ jobs:
             echo "updated=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Find latest tag (update fex-emu)
-        id: update_fex-emu_find_latest
-        uses: oprypin/find-latest-tag@v1
-        with:
-          repository: FEX-Emu/FEX
-          releases-only: true
-      - name: update fex-emu
-        id: update_fex-emu
-        run: |
-          LATEST_TAG=${{ steps.update_fex-emu_find_latest.outputs.tag }}
-
-          echo "FEX_VER: $LATEST_TAG"
-
-          [ -n "$LATEST_TAG" ] && [ "$LATEST_TAG" != "null" ] && echo 'patching Dockerfile' && sed -i "s|ARG FEX_VER=.*|ARG FEX_VER=${LATEST_TAG}|g" $GITHUB_WORKSPACE/Dockerfile
-
-          # Commit FEX-EMU changes if any
-          git add .
-          git status
-          git config --local user.name ${{ env.GIT_USER }}
-          git config --local user.email ${{ env.GIT_EMAIL }}
-          if ! git diff --cached --quiet; then
-            git commit -m "feat: Update FEX-EMU version to ${LATEST_TAG}"
-            echo "updated=true" >> $GITHUB_OUTPUT
-          else
-            echo "updated=false" >> $GITHUB_OUTPUT
-          fi
-
       - name: update resources
         id: update_resources
         env:
@@ -105,7 +78,7 @@ jobs:
           git push origin $GITHUB_REF_NAME
 
       - name: trigger build workflow
-        if: steps.update_fivem.outputs.updated == 'true' || steps.update_fex-emu.outputs.updated == 'true' || steps.update_resources.outputs.updated == 'true'
+        if: steps.update_fivem.outputs.updated == 'true' || steps.update_resources.outputs.updated == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
