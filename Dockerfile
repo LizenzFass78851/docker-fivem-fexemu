@@ -2,8 +2,6 @@ ARG FIVEM_NUM=24079
 ARG FIVEM_VER=24079-679adafe5e79e6d9e517aba4f03443677785e0d7
 ARG DATA_VER=0e7ba538339f7c1c26d0e689aa750a336576cf02
 
-ARG FEX_VER=FEX-2601
-ARG FEX_BUILD=false
 ARG FEX_PACKAGES="fex-emu-armv8.0 fex-emu-armv8.2 fex-emu-armv8.4"
 ARG FEX_INSTALL_PATH=/opt/fex-emu
 
@@ -13,45 +11,6 @@ FROM ubuntu:22.04 AS main
 
 RUN sed -E -i 's#http://[^[:space:]]*ubuntu\.com/ubuntu-ports#http://mirrors.dotsrc.org/ubuntu-ports#g' /etc/apt/sources.list \
 &&  sed -E -i 's#http://[^[:space:]]*ubuntu\.com/ubuntu#http://mirrors.dotsrc.org/ubuntu#g'             /etc/apt/sources.list
-
-# --------------------------------------------------------------------------------
-
-FROM main AS fex-builder-amd64
-
-FROM --platform=arm64 main AS fex-builder-arm64
-
-ARG DEBIAN_FRONTEND
-
-ARG FEX_VER
-ARG FEX_BUILD
-
-RUN if [ "$FEX_BUILD" = "true" ]; then \
-    apt-get update && apt-get install -y cmake \
-        clang-13 llvm-13 nasm ninja-build pkg-config \
-        libcap-dev libglfw3-dev libepoxy-dev python3-dev libsdl2-dev \
-        python3 linux-headers-generic  \
-        git qtbase5-dev qtdeclarative5-dev lld \
-        && apt-get clean && rm -rf /var/lib/apt/lists/*; \
-    fi
-
-WORKDIR /FEX
-ADD https://github.com/FEX-Emu/FEX.git#${FEX_VER} ./
-
-ARG CC=clang-13
-ARG CXX=clang++-13
-RUN if [ "$FEX_BUILD" = "true" ]; then \
-    mkdir build \
-    && cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DUSE_LINKER=lld -DENABLE_LTO=True -DBUILD_TESTING=False -DENABLE_ASSERTIONS=False -G Ninja . \
-    && ninja; \
-    fi
-
-WORKDIR /FEX/Bin
-RUN if [ "$FEX_BUILD" != "true" ]; then \
-    touch dummy--fex-has-not-been-locally-built.txt; \
-    fi
-
-ARG TARGETARCH
-FROM fex-builder-${TARGETARCH} AS fex-builder
 
 # --------------------------------------------------------------------------------
 
@@ -65,8 +24,7 @@ ARG FEX_BUILD
 ARG FEX_PACKAGES
 ARG FEX_INSTALL_PATH
 
-RUN if [ "$FEX_BUILD" != "true" ]; then \
-    apt-get update \
+RUN apt-get update \
     && apt-get install -y --no-install-recommends \
     software-properties-common \
     apt-transport-https \
@@ -74,13 +32,12 @@ RUN if [ "$FEX_BUILD" != "true" ]; then \
     curl \
     gpg-agent \
     && apt-get clean \
-    && add-apt-repository -y ppa:fex-emu/fex; \
-    fi
+    && add-apt-repository -y ppa:fex-emu/fex
+
 
 WORKDIR /tmp
 
-RUN if [ "$FEX_BUILD" != "true" ]; then \
-    for pkg in $FEX_PACKAGES; do \
+RUN for pkg in $FEX_PACKAGES; do \
         apt-get download $pkg; \
         dpkg-deb -x $pkg* ./$pkg; \
         mkdir -p ${FEX_INSTALL_PATH}/$pkg/bin; \
@@ -88,13 +45,7 @@ RUN if [ "$FEX_BUILD" != "true" ]; then \
         cp -ra ./$pkg/usr/bin/* ${FEX_INSTALL_PATH}/$pkg/bin; \
         cp -ra ./$pkg/usr/lib/* ${FEX_INSTALL_PATH}/$pkg/lib; \
         rm -rf ./$pkg*; \
-        done; \
-    fi
-
-WORKDIR ${FEX_INSTALL_PATH}
-RUN if [ "$FEX_BUILD" = "true" ]; then \
-    touch dummy--fex-has-not-been-locally-installed.txt; \
-    fi
+    done
 
 ARG TARGETARCH
 FROM fex-installer-${TARGETARCH} AS fex-installer
@@ -151,7 +102,7 @@ FROM main AS base-amd64
 FROM --platform=arm64 main AS base-arm64
 
 ARG DEBIAN_FRONTEND
-ARG FEX_BUILD
+
 ARG FEX_INSTALL_PATH
 ENV FEX_INSTALL_PATH=${FEX_INSTALL_PATH}
 
@@ -176,7 +127,6 @@ RUN apt-get update \
     libstdc++6 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-COPY --from=fex-builder /FEX/Bin /usr/local/bin
 COPY --from=fex-installer ${FEX_INSTALL_PATH} ${FEX_INSTALL_PATH}
 COPY --from=fex-rootfs /root/.fex-emu /root/.fex-emu
 
