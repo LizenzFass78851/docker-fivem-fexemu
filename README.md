@@ -15,7 +15,7 @@ The container should be stopped so fivem can be configured to the user requireme
 > For AMD64 devices or VMs it is recommended to use a different Docker container image e.g. [spritsail/fivem](https://github.com/spritsail/fivem) although this container image also works on AMD64 devices and VMs.
 
 > [!IMPORTANT]
-> The Docker container can be built on the device to be executed (especially on ARM64) using, for example, `docker compose build` for FEX-Emu to work under Docker. Otherwise, it can be loaded from the container registry.
+> The Docker container is experimental and might not work as expected.
 
 > [!WARNING]
 > - Running it on an AMD64 device or VM is done without using FEX-Emu and therefore remains native.
