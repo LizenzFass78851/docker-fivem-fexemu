@@ -53,15 +53,15 @@ get_cpu_features_version() {
     }
 
     # We don't care beyond 8.4
-    if list_contains_required "$features" "${v8_4Mandatory[@]}"; then
-        arch_version="8.4"
-    elif list_contains_required "$features" "${v8_3Mandatory[@]}"; then
-        arch_version="8.3"
-    elif list_contains_required "$features" "${v8_2Mandatory[@]}"; then
-        arch_version="8.2"
-    elif list_contains_required "$features" "${v8_1Mandatory[@]}"; then
-        arch_version="8.1"
-    fi
+#   if list_contains_required "$features" "${v8_4Mandatory[@]}"; then
+#       arch_version="8.4"
+#   elif list_contains_required "$features" "${v8_3Mandatory[@]}"; then
+#       arch_version="8.3"
+#   elif list_contains_required "$features" "${v8_2Mandatory[@]}"; then
+#       arch_version="8.2"
+#   elif list_contains_required "$features" "${v8_1Mandatory[@]}"; then
+#       arch_version="8.1"
+#   fi
 
     echo "$arch_version"
 }
