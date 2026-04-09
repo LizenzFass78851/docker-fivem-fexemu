@@ -62,14 +62,14 @@ RUN apt-get update \
     && apt-get install -y jq curl squashfs-tools-ng \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /root/.fex-emu/RootFS/Ubuntu_24_04
+WORKDIR /root/.fex-emu/RootFS/ArchLinux
 ADD https://rootfs.fex-emu.gg/RootFS_links.json /tmp/RootFS_links.json
-RUN curl -L "$(jq -r '.v1 | ."Ubuntu 24.04 (SquashFS)" | .URL' /tmp/RootFS_links.json)" -o /tmp/ubuntu.sqsh \
-    && sqfs2tar /tmp/ubuntu.sqsh | tar -x -p --numeric-owner -C ./
+RUN curl -L "$(jq -r '.v1 | ."ArchLinux (SquashFS)" | .URL' /tmp/RootFS_links.json)" -o /tmp/rootfs.sqsh \
+    && sqfs2tar /tmp/rootfs.sqsh | tar -x -p --numeric-owner -C ./
 
 WORKDIR /root/.fex-emu
 
-RUN echo '{"Config":{"RootFS":"Ubuntu_24_04"}}' > ./Config.json
+RUN echo '{"Config":{"RootFS":"ArchLinux"}}' > ./Config.json
 
 ARG TARGETARCH
 FROM fex-rootfs-${TARGETARCH} AS fex-rootfs
