@@ -2,6 +2,8 @@ ARG FIVEM_NUM=28954
 ARG FIVEM_VER=28954-3bfba8e45bae081cfd08eb4aa8584c7aaf123b3f
 ARG DATA_VER=0e7ba538339f7c1c26d0e689aa750a336576cf02
 
+ARG FEX_VER=FEX-2604
+ARG FEX_BUILD=false
 ARG FEX_PACKAGES="fex-emu-armv8.0 fex-emu-armv8.2 fex-emu-armv8.4"
 ARG FEX_INSTALL_PATH=/opt/fex-emu
 
@@ -11,6 +13,69 @@ FROM ubuntu:24.04 AS main
 
 RUN (sed -E -i 's#http://[^[:space:]]*ubuntu\.com/ubuntu-ports#http://mirrors.dotsrc.org/ubuntu-ports#g' /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources || true) \
 &&  (sed -E -i 's#http://[^[:space:]]*ubuntu\.com/ubuntu#http://mirrors.dotsrc.org/ubuntu#g'             /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources || true)
+
+# --------------------------------------------------------------------------------
+
+FROM main AS fex-builder-amd64
+
+FROM --platform=arm64 main AS fex-builder-arm64
+
+ARG DEBIAN_FRONTEND
+
+ARG FEX_VER
+ARG FEX_BUILD
+ARG FEX_PACKAGES
+ARG FEX_INSTALL_PATH
+
+RUN if [ "$FEX_BUILD" = "true" ]; then \
+    apt-get update && apt-get install -y cmake \
+        clang-16 llvm-16 nasm ninja-build pkg-config \
+        libcap-dev libglfw3-dev libepoxy-dev python3-dev libsdl2-dev \
+        python3 linux-headers-generic  \
+        git qtbase5-dev qtdeclarative5-dev lld \
+        && apt-get clean && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+WORKDIR /FEX
+ADD https://github.com/FEX-Emu/FEX.git#${FEX_VER} ./
+
+ARG CC=clang-16
+ARG CXX=clang++-16
+RUN if [ "$FEX_BUILD" = "true" ]; then \
+    for ARCH in v80 v82 v84; do \
+        BUILD_DIR="/FEX/build/$ARCH"; \
+        mkdir -p "$BUILD_DIR" && cd "$BUILD_DIR"; \
+        case $ARCH in \
+            v80) MARCH="armv8-a"; PKG="fex-emu-armv8.0" ;; \
+            v82) MARCH="armv8.2-a"; PKG="fex-emu-armv8.2" ;; \
+            v84) MARCH="armv8.4-a"; PKG="fex-emu-armv8.4" ;; \
+        esac; \
+        cmake \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DUSE_LINKER=lld \
+            -DENABLE_LTO=True \
+            -DBUILD_TESTING=False \
+            -DENABLE_ASSERTIONS=False \
+            -DTUNE_CPU=generic \
+            -DTUNE_ARCH=$MARCH \
+            -G Ninja \
+            ../../ \
+        && ninja && DESTDIR="$FEX_INSTALL_PATH/$PKG" ninja install \
+        && mkdir "$FEX_INSTALL_PATH/$PKG/bin" "$FEX_INSTALL_PATH/$PKG/lib" \
+        && mv $FEX_INSTALL_PATH/$PKG/usr/bin/* $FEX_INSTALL_PATH/$PKG/bin/ \
+        && mv $FEX_INSTALL_PATH/$PKG/usr/lib/* $FEX_INSTALL_PATH/$PKG/lib/ \
+        && rm -rf "$FEX_INSTALL_PATH/$PKG/usr"; \
+    done; \
+    fi
+
+WORKDIR ${FEX_INSTALL_PATH}
+RUN if [ "$FEX_BUILD" != "true" ]; then \
+    touch dummy--fex-has-not-been-locally-built.txt; \
+    fi
+
+ARG TARGETARCH
+FROM fex-builder-${TARGETARCH} AS fex-builder
 
 # --------------------------------------------------------------------------------
 
@@ -24,7 +89,8 @@ ARG FEX_BUILD
 ARG FEX_PACKAGES
 ARG FEX_INSTALL_PATH
 
-RUN apt-get update \
+RUN if [ "$FEX_BUILD" != "true" ]; then \
+    apt-get update \
     && apt-get install -y --no-install-recommends \
     software-properties-common \
     apt-transport-https \
@@ -32,12 +98,13 @@ RUN apt-get update \
     curl \
     gpg-agent \
     && apt-get clean \
-    && add-apt-repository -y ppa:fex-emu/fex
-
+    && add-apt-repository -y ppa:fex-emu/fex; \
+    fi
 
 WORKDIR /tmp
 
-RUN for pkg in $FEX_PACKAGES; do \
+RUN if [ "$FEX_BUILD" != "true" ]; then \
+    for pkg in $FEX_PACKAGES; do \
         apt-get download $pkg; \
         dpkg-deb -x $pkg* ./$pkg; \
         mkdir -p ${FEX_INSTALL_PATH}/$pkg/bin; \
@@ -45,7 +112,13 @@ RUN for pkg in $FEX_PACKAGES; do \
         cp -ra ./$pkg/usr/bin/* ${FEX_INSTALL_PATH}/$pkg/bin; \
         cp -ra ./$pkg/usr/lib/* ${FEX_INSTALL_PATH}/$pkg/lib; \
         rm -rf ./$pkg*; \
-    done
+        done; \
+    fi
+
+WORKDIR ${FEX_INSTALL_PATH}
+RUN if [ "$FEX_BUILD" = "true" ]; then \
+    touch dummy--fex-has-not-been-locally-installed.txt; \
+    fi
 
 ARG TARGETARCH
 FROM fex-installer-${TARGETARCH} AS fex-installer
@@ -102,7 +175,7 @@ FROM main AS base-amd64
 FROM --platform=arm64 main AS base-arm64
 
 ARG DEBIAN_FRONTEND
-
+ARG FEX_BUILD
 ARG FEX_INSTALL_PATH
 ENV FEX_INSTALL_PATH=${FEX_INSTALL_PATH}
 
@@ -127,6 +200,7 @@ RUN apt-get update \
     libstdc++6 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+COPY --from=fex-builder ${FEX_INSTALL_PATH} ${FEX_INSTALL_PATH}
 COPY --from=fex-installer ${FEX_INSTALL_PATH} ${FEX_INSTALL_PATH}
 COPY --from=fex-rootfs /root/.fex-emu /root/.fex-emu
 
