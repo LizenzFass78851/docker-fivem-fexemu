@@ -59,7 +59,7 @@ RUN if [ "$FEX_BUILD" = "true" ]; then \
             -DCMAKE_C_FLAGS="-march=${MARCH}" \
             -DCMAKE_CXX_FLAGS="-march=${MARCH}" \
             -G Ninja \
-            . \
+            ../../ \
         && ninja && DESTDIR=$FEX_INSTALL_PATH/$PKG ninja install; \
     done; \
     fi
