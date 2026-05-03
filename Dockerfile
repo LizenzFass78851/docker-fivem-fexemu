@@ -61,6 +61,7 @@ RUN if [ "$FEX_BUILD" = "true" ]; then \
             -G Ninja \
             ../../ \
         && ninja && DESTDIR=$FEX_INSTALL_PATH/$PKG ninja install \
+        && bash -c 'mkdir $FEX_INSTALL_PATH/$PKG/{bin,lib}' \
         && mv $FEX_INSTALL_PATH/$PKG/usr/bin/* $FEX_INSTALL_PATH/$PKG/bin/ \
         && mv $FEX_INSTALL_PATH/$PKG/usr/lib/* $FEX_INSTALL_PATH/$PKG/lib/ \
         && rm -rf $FEX_INSTALL_PATH/$PKG/usr; \
