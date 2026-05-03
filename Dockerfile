@@ -3,7 +3,7 @@ ARG FIVEM_VER=28954-3bfba8e45bae081cfd08eb4aa8584c7aaf123b3f
 ARG DATA_VER=0e7ba538339f7c1c26d0e689aa750a336576cf02
 
 ARG FEX_VER=FEX-2601
-ARG FEX_BUILD=true
+ARG FEX_BUILD=false
 ARG FEX_PACKAGES="fex-emu-armv8.0 fex-emu-armv8.2 fex-emu-armv8.4"
 ARG FEX_INSTALL_PATH=/opt/fex-emu
 

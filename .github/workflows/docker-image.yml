@@ -66,11 +66,11 @@ jobs:
         id: set_build_args
         shell: bash
         run: |
-          if [[ "${{ github.event.inputs.fex-source-build }}" != "no" ]]; then
-            sed -i "s|ARG FEX_BUILD=.*|ARG FEX_BUILD=true|g" $GITHUB_WORKSPACE/Dockerfile
-          else
+          if [[ "${{ github.event.inputs.fex-source-build }}" == "no" ]]; then
             sed -i "s|ARG FEX_BUILD=.*|ARG FEX_BUILD=false|g" $GITHUB_WORKSPACE/Dockerfile
             echo "SKIP_PUSH=true" >> $GITHUB_OUTPUT
+          else
+            sed -i "s|ARG FEX_BUILD=.*|ARG FEX_BUILD=true|g" $GITHUB_WORKSPACE/Dockerfile
           fi
 
       - name: Build main Docker image
