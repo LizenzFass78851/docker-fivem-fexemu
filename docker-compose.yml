@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        FEX_BUILD: "true"
+        FEX_BUILD: "false"
     image: ghcr.io/lizenzfass78851/docker-fivem-fexemu:latest
     container_name: fivem
     restart: always

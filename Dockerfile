@@ -3,7 +3,7 @@ ARG FIVEM_VER=28954-3bfba8e45bae081cfd08eb4aa8584c7aaf123b3f
 ARG DATA_VER=0e7ba538339f7c1c26d0e689aa750a336576cf02
 
 ARG FEX_VER=FEX-2601
-ARG FEX_BUILD=false
+ARG FEX_BUILD=true
 ARG FEX_PACKAGES="fex-emu-armv8.0 fex-emu-armv8.2 fex-emu-armv8.4"
 ARG FEX_INSTALL_PATH=/opt/fex-emu
 
@@ -24,6 +24,8 @@ ARG DEBIAN_FRONTEND
 
 ARG FEX_VER
 ARG FEX_BUILD
+ARG FEX_PACKAGES
+ARG FEX_INSTALL_PATH
 
 RUN if [ "$FEX_BUILD" = "true" ]; then \
     apt-get update && apt-get install -y cmake \
@@ -40,12 +42,29 @@ ADD https://github.com/FEX-Emu/FEX.git#${FEX_VER} ./
 ARG CC=clang-13
 ARG CXX=clang++-13
 RUN if [ "$FEX_BUILD" = "true" ]; then \
-    mkdir build \
-    && cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Release -DUSE_LINKER=lld -DENABLE_LTO=True -DBUILD_TESTING=False -DENABLE_ASSERTIONS=False -G Ninja . \
-    && ninja; \
+    for ARCH in v80 v82 v84; do \
+        mkdir -p /FEX/build/$ARCH && cd /FEX/build/$ARCH && \
+        case $ARCH in \
+            v80) MARCH="armv8-a" PKG="fex-emu-armv8.0" ;; \
+            v82) MARCH="armv8.2-a" PKG="fex-emu-armv8.2" ;; \
+            v84) MARCH="armv8.4-a+flagm+lse" PKG="fex-emu-armv8.4" ;; \
+        esac && \
+        cmake \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DUSE_LINKER=lld \
+            -DENABLE_LTO=True \
+            -DBUILD_TESTING=False \
+            -DENABLE_ASSERTIONS=False \
+            -DCMAKE_C_FLAGS="-march=${MARCH}" \
+            -DCMAKE_CXX_FLAGS="-march=${MARCH}" \
+            -G Ninja \
+            . \
+        && ninja && DESTDIR=$FEX_INSTALL_PATH/$PKG ninja install; \
+    done; \
     fi
 
-WORKDIR /FEX/Bin
+WORKDIR ${FEX_INSTALL_PATH}
 RUN if [ "$FEX_BUILD" != "true" ]; then \
     touch dummy--fex-has-not-been-locally-built.txt; \
     fi
@@ -176,7 +195,7 @@ RUN apt-get update \
     libstdc++6 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-COPY --from=fex-builder /FEX/Bin /usr/local/bin
+COPY --from=fex-builder ${FEX_INSTALL_PATH} ${FEX_INSTALL_PATH}
 COPY --from=fex-installer ${FEX_INSTALL_PATH} ${FEX_INSTALL_PATH}
 COPY --from=fex-rootfs /root/.fex-emu /root/.fex-emu
 
