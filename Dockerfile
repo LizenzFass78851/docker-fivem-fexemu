@@ -7,10 +7,14 @@ ARG FEX_INSTALL_PATH=/opt/fex-emu
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-FROM ubuntu:24.04 AS main
+FROM ubuntu:26.04 AS main
 
 RUN (sed -E -i 's#http://[^[:space:]]*ubuntu\.com/ubuntu-ports#http://mirrors.dotsrc.org/ubuntu-ports#g' /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources || true) \
 &&  (sed -E -i 's#http://[^[:space:]]*ubuntu\.com/ubuntu#http://mirrors.dotsrc.org/ubuntu#g'             /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources || true)
+
+RUN (ls --version | grep -q uutils && (apt-get remove -y --allow-remove-essential coreutils-from-uutils && \ 
+    rm -rf /var/cache/apt /var/lib/apt/lists)) \
+    || (echo "uutils coreutils not found, skipping removal." && true)
 
 # --------------------------------------------------------------------------------
 
