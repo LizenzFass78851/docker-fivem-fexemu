@@ -43,12 +43,13 @@ ARG CC=clang-16
 ARG CXX=clang++-16
 RUN if [ "$FEX_BUILD" = "true" ]; then \
     for ARCH in v80 v82 v84; do \
-        mkdir -p /FEX/build/$ARCH && cd /FEX/build/$ARCH && \
+        BUILD_DIR="/FEX/build/$ARCH"; \
+        mkdir -p "$BUILD_DIR" && cd "$BUILD_DIR"; \
         case $ARCH in \
-            v80) MARCH="armv8-a" PKG="fex-emu-armv8.0" ;; \
-            v82) MARCH="armv8.2-a" PKG="fex-emu-armv8.2" ;; \
-            v84) MARCH="armv8.4-a+flagm+lse" PKG="fex-emu-armv8.4" ;; \
-        esac && \
+            v80) MARCH="armv8-a"; PKG="fex-emu-armv8.0" ;; \
+            v82) MARCH="armv8.2-a"; PKG="fex-emu-armv8.2" ;; \
+            v84) MARCH="armv8.4-a+flagm+lse"; PKG="fex-emu-armv8.4" ;; \
+        esac; \
         cmake \
             -DCMAKE_INSTALL_PREFIX=/usr \
             -DCMAKE_BUILD_TYPE=Release \
@@ -60,11 +61,11 @@ RUN if [ "$FEX_BUILD" = "true" ]; then \
             -DCMAKE_CXX_FLAGS="-march=${MARCH}" \
             -G Ninja \
             ../../ \
-        && ninja && DESTDIR=$FEX_INSTALL_PATH/$PKG ninja install \
-        && bash -c 'mkdir $FEX_INSTALL_PATH/$PKG/{bin,lib}' \
+        && ninja && DESTDIR="$FEX_INSTALL_PATH/$PKG" ninja install \
+        && mkdir "$FEX_INSTALL_PATH/$PKG/bin" "$FEX_INSTALL_PATH/$PKG/lib" \
         && mv $FEX_INSTALL_PATH/$PKG/usr/bin/* $FEX_INSTALL_PATH/$PKG/bin/ \
         && mv $FEX_INSTALL_PATH/$PKG/usr/lib/* $FEX_INSTALL_PATH/$PKG/lib/ \
-        && rm -rf $FEX_INSTALL_PATH/$PKG/usr; \
+        && rm -rf "$FEX_INSTALL_PATH/$PKG/usr"; \
     done; \
     fi
 
