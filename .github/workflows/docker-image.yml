@@ -95,6 +95,7 @@ jobs:
       - name: Build and push main Docker image
         id: build
         uses: docker/build-push-action@v7
+        if: ${{ !steps.set_build_args.outputs.SKIP_PUSH }}
         with:
           build-args: GH_TOKEN=${{ github.token }}
           context: .

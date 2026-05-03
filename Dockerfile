@@ -2,7 +2,7 @@ ARG FIVEM_NUM=30819
 ARG FIVEM_VER=30819-790579bf864202684c619841eb155075cb2b9c57
 ARG DATA_VER=0e7ba538339f7c1c26d0e689aa750a336576cf02
 
-ARG FEX_PACKAGES="fex-emu-armv8.0 fex-emu-armv8.2 fex-emu-armv8.4"
+ARG FEX_VER=FEX-2604
 ARG FEX_INSTALL_PATH=/opt/fex-emu
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -14,41 +14,57 @@ RUN (sed -E -i 's#http://[^[:space:]]*ubuntu\.com/ubuntu-ports#http://mirrors.do
 
 # --------------------------------------------------------------------------------
 
-FROM main AS fex-installer-amd64
+FROM main AS fex-builder-amd64
 
-FROM --platform=arm64 main AS fex-installer-arm64
+FROM --platform=arm64 main AS fex-builder-arm64
 
 ARG DEBIAN_FRONTEND
 
-ARG FEX_BUILD
-ARG FEX_PACKAGES
+ARG FEX_VER
 ARG FEX_INSTALL_PATH
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    software-properties-common \
-    apt-transport-https \
-    ca-certificates \
-    curl \
-    gpg-agent \
-    && apt-get clean \
-    && add-apt-repository -y ppa:fex-emu/fex
+RUN apt-get update && apt-get install -y cmake \
+        clang-16 llvm-16 nasm ninja-build pkg-config \
+        libcap-dev libglfw3-dev libepoxy-dev python3-dev libsdl2-dev \
+        python3 linux-headers-generic  \
+        git qtbase5-dev qtdeclarative5-dev lld \
+        && apt-get clean && rm -rf /var/lib/apt/lists/*
 
+WORKDIR /FEX
+ADD https://github.com/FEX-Emu/FEX.git#${FEX_VER} ./
 
-WORKDIR /tmp
-
-RUN for pkg in $FEX_PACKAGES; do \
-        apt-get download $pkg; \
-        dpkg-deb -x $pkg* ./$pkg; \
-        mkdir -p ${FEX_INSTALL_PATH}/$pkg/bin; \
-        mkdir -p ${FEX_INSTALL_PATH}/$pkg/lib; \
-        cp -ra ./$pkg/usr/bin/* ${FEX_INSTALL_PATH}/$pkg/bin; \
-        cp -ra ./$pkg/usr/lib/* ${FEX_INSTALL_PATH}/$pkg/lib; \
-        rm -rf ./$pkg*; \
+ARG CC=clang-16
+ARG CXX=clang++-16
+RUN for ARCH in v80 v82 v84; do \
+        BUILD_DIR="/FEX/build/$ARCH"; \
+        mkdir -p "$BUILD_DIR" && cd "$BUILD_DIR"; \
+        case $ARCH in \
+            v80) MARCH="armv8-a"; PKG="fex-emu-armv8.0" ;; \
+            v82) MARCH="armv8.2-a"; PKG="fex-emu-armv8.2" ;; \
+            v84) MARCH="armv8.4-a"; PKG="fex-emu-armv8.4" ;; \
+        esac; \
+        cmake \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DUSE_LINKER=lld \
+            -DENABLE_LTO=True \
+            -DBUILD_TESTING=False \
+            -DENABLE_ASSERTIONS=False \
+            -DTUNE_CPU=generic \
+            -DTUNE_ARCH=$MARCH \
+            -G Ninja \
+            ../../ \
+        && ninja && DESTDIR="$FEX_INSTALL_PATH/$PKG" ninja install \
+        && mkdir "$FEX_INSTALL_PATH/$PKG/bin" "$FEX_INSTALL_PATH/$PKG/lib" \
+        && mv $FEX_INSTALL_PATH/$PKG/usr/bin/* $FEX_INSTALL_PATH/$PKG/bin/ \
+        && mv $FEX_INSTALL_PATH/$PKG/usr/lib/* $FEX_INSTALL_PATH/$PKG/lib/ \
+        && rm -rf "$FEX_INSTALL_PATH/$PKG/usr"; \
     done
 
+WORKDIR ${FEX_INSTALL_PATH}
+
 ARG TARGETARCH
-FROM fex-installer-${TARGETARCH} AS fex-installer
+FROM fex-builder-${TARGETARCH} AS fex-builder
 
 # --------------------------------------------------------------------------------
 
@@ -102,7 +118,6 @@ FROM main AS base-amd64
 FROM --platform=arm64 main AS base-arm64
 
 ARG DEBIAN_FRONTEND
-
 ARG FEX_INSTALL_PATH
 ENV FEX_INSTALL_PATH=${FEX_INSTALL_PATH}
 
@@ -127,7 +142,7 @@ RUN apt-get update \
     libstdc++6 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
-COPY --from=fex-installer ${FEX_INSTALL_PATH} ${FEX_INSTALL_PATH}
+COPY --from=fex-builder ${FEX_INSTALL_PATH} ${FEX_INSTALL_PATH}
 COPY --from=fex-rootfs /root/.fex-emu /root/.fex-emu
 
 ARG TARGETARCH
