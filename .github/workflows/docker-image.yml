@@ -8,6 +8,13 @@ on:
   schedule:
     - cron: '44 14 */3 * 2'
   workflow_dispatch:
+    inputs:
+      fex-source-build-test:
+        description: 'FEX Build from Source as Test?'
+        required: false
+        options: [ 'yes', 'no' ]
+        type: choice
+        default: 'no'
 
 concurrency:
   group: ${{ github.workflow }}${{ github.event.pull_request.number && '-' }}${{ github.event.pull_request.number || '' }}
@@ -55,6 +62,10 @@ jobs:
           flavor: |
             latest=${{ github.ref_name == 'master' }}
 
+      - name: Set Build args into Dockerfile
+        if: ${{ github.event.inputs.fex-source-build-test == 'yes' }}
+        run: sed -i "s|ARG FEX_BUILD=.*|ARG FEX_BUILD=true|g" $GITHUB_WORKSPACE/Dockerfile
+
       - name: Build main Docker image
         id: prebuild
         uses: docker/build-push-action@v7
@@ -95,6 +106,7 @@ jobs:
       - name: Build and push main Docker image
         id: build
         uses: docker/build-push-action@v7
+        if: ${{ github.event.inputs.fex-source-build-test != 'yes' }}
         with:
           build-args: GH_TOKEN=${{ github.token }}
           context: .
