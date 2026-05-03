@@ -29,7 +29,7 @@ ARG FEX_INSTALL_PATH
 
 RUN if [ "$FEX_BUILD" = "true" ]; then \
     apt-get update && apt-get install -y cmake \
-        clang-14 llvm-14 nasm ninja-build pkg-config \
+        clang-16 llvm-16 nasm ninja-build pkg-config \
         libcap-dev libglfw3-dev libepoxy-dev python3-dev libsdl2-dev \
         python3 linux-headers-generic  \
         git qtbase5-dev qtdeclarative5-dev lld \
@@ -39,8 +39,8 @@ RUN if [ "$FEX_BUILD" = "true" ]; then \
 WORKDIR /FEX
 ADD https://github.com/FEX-Emu/FEX.git#${FEX_VER} ./
 
-ARG CC=clang-14
-ARG CXX=clang++-14
+ARG CC=clang-16
+ARG CXX=clang++-16
 RUN if [ "$FEX_BUILD" = "true" ]; then \
     for ARCH in v80 v82 v84; do \
         mkdir -p /FEX/build/$ARCH && cd /FEX/build/$ARCH && \
