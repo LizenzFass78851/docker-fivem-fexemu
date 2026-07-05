@@ -9,8 +9,24 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 FROM ubuntu:24.04 AS main
 
-RUN (sed -E -i 's#http://[^[:space:]]*ubuntu\.com/ubuntu-ports#http://mirrors.dotsrc.org/ubuntu-ports#g' /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources || true) \
-&&  (sed -E -i 's#http://[^[:space:]]*ubuntu\.com/ubuntu#http://mirrors.dotsrc.org/ubuntu#g'             /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources || true)
+ARG DEBIAN_FRONTEND
+WORKDIR /etc/apt/mirrors
+RUN cat > /etc/apt/mirrors/ubuntu.list <<'EOF'
+http://azure.archive.ubuntu.com/ubuntu	priority:1
+http://archive.ubuntu.com/ubuntu	priority:2
+http://mirrors.dotsrc.org/ubuntu	priority:3
+EOF
+RUN cat > /etc/apt/mirrors/ubuntu-ports.list <<'EOF'
+http://azure.ports.ubuntu.com/ubuntu-ports	priority:1
+http://ports.ubuntu.com/ubuntu-ports	priority:2
+http://mirrors.dotsrc.org/ubuntu-ports	priority:3
+EOF
+RUN (sed -E -i 's#http://[^[:space:]]*ubuntu\.com/ubuntu-ports#mirror+file:///etc/apt/mirrors/ubuntu-ports.list#g' /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources || true) \
+&&  (sed -E -i 's#http://[^[:space:]]*ubuntu\.com/ubuntu#mirror+file:///etc/apt/mirrors/ubuntu.list#g'             /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources || true)
+RUN if ls --version | grep -q uutils; then \
+    apt-get update > /dev/null && apt-get remove -y --allow-remove-essential coreutils-from-uutils; \ 
+    rm -rf /var/cache/apt /var/lib/apt/lists; else \
+    echo "uutils coreutils not found, skipping removal."; fi
 
 # --------------------------------------------------------------------------------
 
