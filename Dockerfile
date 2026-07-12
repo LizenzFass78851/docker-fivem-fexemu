@@ -7,7 +7,10 @@ ARG FEX_INSTALL_PATH=/opt/fex-emu
 
 ARG DEBIAN_FRONTEND=noninteractive
 
-FROM ubuntu:24.04 AS main
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+
+FROM ubuntu:26.04 AS stage
 
 ARG DEBIAN_FRONTEND
 WORKDIR /etc/apt/mirrors
@@ -30,9 +33,33 @@ RUN if ls --version | grep -q uutils; then \
 
 # --------------------------------------------------------------------------------
 
-FROM main AS fex-builder-amd64
+FROM ubuntu:22.04 AS build
 
-FROM --platform=arm64 main AS fex-builder-arm64
+ARG DEBIAN_FRONTEND
+WORKDIR /etc/apt/mirrors
+RUN cat > /etc/apt/mirrors/ubuntu.list <<'EOF'
+http://azure.archive.ubuntu.com/ubuntu	priority:1
+http://archive.ubuntu.com/ubuntu	priority:2
+http://mirrors.dotsrc.org/ubuntu	priority:3
+EOF
+RUN cat > /etc/apt/mirrors/ubuntu-ports.list <<'EOF'
+http://azure.ports.ubuntu.com/ubuntu-ports	priority:1
+http://ports.ubuntu.com/ubuntu-ports	priority:2
+http://mirrors.dotsrc.org/ubuntu-ports	priority:3
+EOF
+RUN (sed -E -i 's#http://[^[:space:]]*ubuntu\.com/ubuntu-ports#mirror+file:///etc/apt/mirrors/ubuntu-ports.list#g' /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources || true) \
+&&  (sed -E -i 's#http://[^[:space:]]*ubuntu\.com/ubuntu#mirror+file:///etc/apt/mirrors/ubuntu.list#g'             /etc/apt/sources.list /etc/apt/sources.list.d/ubuntu.sources || true)
+RUN if ls --version | grep -q uutils; then \
+    apt-get update > /dev/null && apt-get remove -y --allow-remove-essential coreutils-from-uutils; \ 
+    rm -rf /var/cache/apt /var/lib/apt/lists; else \
+    echo "uutils coreutils not found, skipping removal."; fi
+
+# --------------------------------------------------------------------------------
+# --------------------------------------------------------------------------------
+
+FROM build AS fex-builder-amd64
+
+FROM --platform=arm64 build AS fex-builder-arm64
 
 ARG DEBIAN_FRONTEND
 
@@ -40,7 +67,7 @@ ARG FEX_VER
 ARG FEX_INSTALL_PATH
 
 RUN apt-get update && apt-get install -y cmake \
-        clang-16 llvm-16 nasm ninja-build pkg-config \
+        clang-13 llvm-13 nasm ninja-build pkg-config \
         libcap-dev libglfw3-dev libepoxy-dev python3-dev libsdl2-dev \
         python3 linux-headers-generic  \
         git qtbase5-dev qtdeclarative5-dev lld \
@@ -49,8 +76,8 @@ RUN apt-get update && apt-get install -y cmake \
 WORKDIR /FEX
 ADD https://github.com/FEX-Emu/FEX.git#${FEX_VER} ./
 
-ARG CC=clang-16
-ARG CXX=clang++-16
+ARG CC=clang-13
+ARG CXX=clang++-13
 RUN for ARCH in v80 v82 v84; do \
         BUILD_DIR="/FEX/build/$ARCH"; \
         mkdir -p "$BUILD_DIR" && cd "$BUILD_DIR"; \
@@ -84,9 +111,9 @@ FROM fex-builder-${TARGETARCH} AS fex-builder
 
 # --------------------------------------------------------------------------------
 
-FROM main AS fex-rootfs-amd64
+FROM stage AS fex-rootfs-amd64
 
-FROM --platform=arm64 main AS fex-rootfs-arm64
+FROM --platform=arm64 stage AS fex-rootfs-arm64
 
 ARG DEBIAN_FRONTEND
 
@@ -108,7 +135,7 @@ FROM fex-rootfs-${TARGETARCH} AS fex-rootfs
 
 # --------------------------------------------------------------------------------
 
-FROM main AS fx-downloader
+FROM stage AS fx-downloader
 
 ARG DEBIAN_FRONTEND
 
@@ -129,9 +156,9 @@ RUN tar xz --strip-components=1 -C /opt/cfx-server-data -f /tmp/cfx-server-data.
 ADD server.cfg /opt/cfx-server-data
 
 # --------------------------------------------------------------------------------
-FROM main AS base-amd64
+FROM stage AS base-amd64
 
-FROM --platform=arm64 main AS base-arm64
+FROM --platform=arm64 stage AS base-arm64
 
 ARG DEBIAN_FRONTEND
 ARG FEX_INSTALL_PATH
