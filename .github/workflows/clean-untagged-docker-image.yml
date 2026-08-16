@@ -1,0 +1,19 @@
+name: Remove untagged images from registry
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 1 * * *"
+
+jobs:
+  remove_untagged_images:
+    runs-on: ubuntu-latest
+    if: ${{ (github.event_name == 'schedule' && github.repository_owner != 'LizenzFass78851') || github.event_name != 'schedule' }}
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Delete all containers from package without tags
+        uses: dataaxiom/ghcr-cleanup-action@main
+        with:
+          delete-untagged: true
