@@ -22,12 +22,15 @@ jobs:
       - name: update fivem
         id: update_fivem
         env:
-          SRV_ADR: "https://runtime.fivem.net/artifacts/fivem/build_proot_linux/master/"
+          SRV_ADR: "https://changelogs-live.fivem.net/api/changelog/versions/linux/server/"
         run: |
-          DL_URL="$(wget -qO- "$SRV_ADR" | grep -oE 'href="\./[0-9]+-[^/]+/fx\.tar\.xz"' | sed -E 's#href="\./([^"]+)".*#\1#' | sort -t- -k1,1n | tail -n1)"
-          
-          without_suffix=${DL_URL%/fx.tar.xz}
+          DL_URL="$(wget -qO- "$SRV_ADR" | jq -r '.latest_download' | head -n1)"
+          [ -z "$DL_URL" ] && echo "::error::Failed to fetch latest FiveM download URL from $SRV_ADR" && exit 1
+
+          without_suffix=$(echo "${DL_URL}" | grep -oE '[0-9]+-[^/]+')
+          [ -z "$without_suffix" ] && echo "::error::Failed to extract version without suffix from $DL_URL" && exit 1
           version=${without_suffix%%-*}
+          [ -z "$version" ] && echo "::error::Failed to fetch latest FiveM version from $SRV_ADR" && exit 1
 
           echo "FIVEM_NUM: $version"
           echo "FIVEM_VER: $without_suffix"
@@ -88,6 +91,7 @@ jobs:
           GIT_ADR: "https://github.com/citizenfx/cfx-server-data/"
         run: |
           LATEST_HASH=$(git ls-remote "${{env.GIT_ADR}}" HEAD | cut -f1)
+          [ -z "$LATEST_HASH" ] && echo "::error::Failed to fetch latest commit hash from $GIT_ADR" && exit 1
           
           echo "DATA_VER: $LATEST_HASH"
 
