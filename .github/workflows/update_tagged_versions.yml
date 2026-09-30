@@ -16,8 +16,6 @@ jobs:
     steps:
       - name: clone
         uses: actions/checkout@v7
-        with:
-          clean: false
 
       - name: update fivem
         id: update_fivem
