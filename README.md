@@ -99,3 +99,4 @@ docker run -d \
 - `NO_DEFAULT_CONFIG` - Optional. Set to any non-zero value to disable the default exec config. This is required for txAdmin.
 - `NO_LICENSE_KEY` - Optional. Set to any non-zero length value to disable specifying the license key in the environment. Useful if your license key is in a config file.
 - `NO_ONESYNC` - Removed. Onesync is now the default option in FiveM. Add `set onesync off` to your config file if you need the old behaviour.
+- `USE_ENHANCED` - Optional. Set to true to use fivem enhanced (this requires: `security_opt: -> seccomp:unconfined`)

@@ -2,7 +2,9 @@ ARG FIVEM_NUM=38164
 ARG FIVEM_VER=38164-c7a8db730dbaaf1519221ac63e179e2f3af48d55
 ARG DATA_VER=c6afa3909c763e3327ed76825e78453286c99f05
 
-ARG FEX_VER=FEX-2604
+ARG FIVEM_ENHANCED_UUID=01a0f7ee-dfa5-7d23-a7a4-86de1b40d6f1
+
+ARG FEX_VER=FEX-2609
 ARG FEX_INSTALL_PATH=/opt/fex-emu
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -142,6 +144,8 @@ ARG DEBIAN_FRONTEND
 ARG FIVEM_VER
 ARG DATA_VER
 
+ARG FIVEM_ENHANCED_UUID
+
 RUN apt-get update \
     && apt-get install -y wget xz-utils \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -152,6 +156,9 @@ RUN tar xJ --strip-components=0 -C /opt/cfx-server -f /tmp/fx.tar.xz
 WORKDIR /opt/cfx-server-data
 ADD http://github.com/citizenfx/cfx-server-data/archive/${DATA_VER}.tar.gz /tmp/cfx-server-data.tar.gz
 RUN tar xz --strip-components=1 -C /opt/cfx-server-data -f /tmp/cfx-server-data.tar.gz
+WORKDIR /opt/cfx-server-enhanced
+ADD https://downloads.cfx-services.net/prod/${FIVEM_ENHANCED_UUID}/cfx-server_linux_x64.tar.xz /tmp/fx.tar.xz
+RUN tar xJ --strip-components=0 -C /opt/cfx-server-enhanced -f /tmp/fx.tar.xz
 
 ADD server.cfg /opt/cfx-server-data
 
@@ -211,10 +218,8 @@ RUN apt-get update \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 COPY --from=fx-downloader /opt/cfx-server /opt/cfx-server
+COPY --from=fx-downloader /opt/cfx-server-enhanced /opt/cfx-server-enhanced
 COPY --from=fx-downloader /opt/cfx-server-data /opt/cfx-server-data
-
-RUN mkdir /txData \
-    && ln -s /txData /opt/cfx-server/txData
 
 ENV CFX_SERVER=/opt/cfx-server
 
