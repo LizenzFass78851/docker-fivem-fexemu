@@ -48,6 +48,33 @@ jobs:
             echo "updated=false" >> $GITHUB_OUTPUT
           fi
 
+      - name: update fivem_enhanced
+        id: update_fivem_enhanced
+        env:
+          SRV_ADR: "https://docs.fivem.net/docs/server-download/"
+        run: |
+          DL_URL="$(wget -qO- "$SRV_ADR" | grep -oE 'https://downloads\.cfx-services\.net/prod/[^"]+/cfx-server_linux_x64\.tar\.xz' | head -n1)"
+          [ -z "$DL_URL" ] && echo "::error::Failed to fetch latest FiveM download URL from $SRV_ADR" && exit 1
+
+          uuid=$(echo "${DL_URL}" | grep -oE '[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}')
+          [ -z "$uuid" ] && echo "::error::Failed to extract UUID from $DL_URL" && exit 1
+
+          echo "FIVEM_ENHANCED_UUID: $uuid"
+
+          [ -n "$uuid" ] && echo 'patching Dockerfile' && sed -i "s|ARG FIVEM_ENHANCED_UUID=.*|ARG FIVEM_ENHANCED_UUID=${uuid}|g" $GITHUB_WORKSPACE/Dockerfile
+
+          # Commit FiveM changes if any
+          git add .
+          git status
+          git config --local user.name ${{ env.GIT_USER }}
+          git config --local user.email ${{ env.GIT_EMAIL }}
+          if ! git diff --cached --quiet; then
+            git commit -m "feat: Update FiveM enhanced UUID to ${uuid}"
+            echo "updated=true" >> $GITHUB_OUTPUT
+          else
+            echo "updated=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Find latest tag (update fex-emu)
         id: update_fex-emu_find_latest
         env:

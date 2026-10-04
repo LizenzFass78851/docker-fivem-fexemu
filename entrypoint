@@ -42,7 +42,21 @@ if [ -z "${NO_LICENSE_KEY}${NO_LICENCE_KEY}" ]; then
     CONFIG_ARGS="$CONFIG_ARGS +set sv_licenseKey ${LICENSE_KEY}"
 fi
 
-exec $( [ "$(uname -m)" = "aarch64" ] && echo $(command -v "fex-starter.sh") ) \
+FEX_EMU_CMD="$( [ "$(uname -m)" = "aarch64" ] && echo $(command -v "fex-starter.sh") )"
+if [ $USE_ENHANCED = "true" ]; then
+CFX_SERVER="/opt/cfx-server-enhanced"
+mkdir -p /txData && ln -s /txData $CFX_SERVER/txData || true
+exec $FEX_EMU_CMD \
+    $CFX_SERVER/alpine/lib/ld-musl-x86_64.so.1 \
+    --library-path "$CFX_SERVER/alpine/lib/:$CFX_SERVER/alpine/usr/lib/" -- \
+    $CFX_SERVER/alpine/opt/cfx-server/cfx-server \
+        +set citizen_dir $CFX_SERVER/alpine/opt/cfx-server/citizen/ \
+        $CONFIG_ARGS \
+        $*
+else
+CFX_SERVER="/opt/cfx-server"
+mkdir -p /txData && ln -s /txData $CFX_SERVER/txData || true
+exec $FEX_EMU_CMD \
     $CFX_SERVER/alpine/opt/cfx-server/ld-musl-x86_64.so.1 \
     --library-path "$CFX_SERVER/alpine/usr/lib/v8/:$CFX_SERVER/alpine/lib/:$CFX_SERVER/alpine/usr/lib/" \
     -- \
@@ -50,3 +64,4 @@ exec $( [ "$(uname -m)" = "aarch64" ] && echo $(command -v "fex-starter.sh") ) \
         +set citizen_dir $CFX_SERVER/alpine/opt/cfx-server/citizen/ \
         $CONFIG_ARGS \
         $*
+fi
