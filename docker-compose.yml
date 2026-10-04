@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     image: ghcr.io/lizenzfass78851/docker-fivem-fexemu:latest
     container_name: fivem
+    security_opt:
+      - seccomp:unconfined
     restart: always
     stdin_open: true
     tty: true
@@ -19,6 +21,7 @@ services:
       # - "40120:40120"
     environment:
       LICENSE_KEY: "license-key-here"
+      USE_ENHANCED: "false"
 
 volumes:
   fivem:
