@@ -29,7 +29,7 @@ if [ -z "${NO_LICENSE_KEY}${NO_LICENCE_KEY}" ]; then
         LICENSE_KEY="${LICENCE_KEY}"
     fi
 
-    if [ -z "${NO_DEFAULT_CONFIG}"] && [ -z "${LICENSE_KEY}" ]; then
+    if [ -z "${NO_DEFAULT_CONFIG}" ] && [ -z "${LICENSE_KEY}" ]; then
         >&2 printf "License key not found in environment, please create one at https://keymaster.fivem.net!\n"
         exit 1
     fi
@@ -43,9 +43,9 @@ if [ -z "${NO_LICENSE_KEY}${NO_LICENCE_KEY}" ]; then
 fi
 
 FEX_EMU_CMD="$( [ "$(uname -m)" = "aarch64" ] && echo $(command -v "fex-starter.sh") )"
-if [ $USE_ENHANCED = "true" ]; then
+if [ "$USE_ENHANCED" = "true" ]; then
 CFX_SERVER="/opt/cfx-server-enhanced"
-mkdir -p /txData && ln -s /txData $CFX_SERVER/txData || true
+mkdir -p /txData && ln -sfn /txData $CFX_SERVER/txData || true
 exec $FEX_EMU_CMD \
     $CFX_SERVER/alpine/lib/ld-musl-x86_64.so.1 \
     --library-path "$CFX_SERVER/alpine/lib/:$CFX_SERVER/alpine/usr/lib/" -- \
@@ -55,7 +55,7 @@ exec $FEX_EMU_CMD \
         $*
 else
 CFX_SERVER="/opt/cfx-server"
-mkdir -p /txData && ln -s /txData $CFX_SERVER/txData || true
+mkdir -p /txData && ln -sfn /txData $CFX_SERVER/txData || true
 exec $FEX_EMU_CMD \
     $CFX_SERVER/alpine/opt/cfx-server/ld-musl-x86_64.so.1 \
     --library-path "$CFX_SERVER/alpine/usr/lib/v8/:$CFX_SERVER/alpine/lib/:$CFX_SERVER/alpine/usr/lib/" \
