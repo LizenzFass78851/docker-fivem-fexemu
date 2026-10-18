@@ -42,7 +42,27 @@ if [ -z "${NO_LICENSE_KEY}${NO_LICENCE_KEY}" ]; then
     CONFIG_ARGS="$CONFIG_ARGS +set sv_licenseKey ${LICENSE_KEY}"
 fi
 
-FEX_EMU_CMD="$( [ "$(uname -m)" = "aarch64" ] && echo $(command -v "fex-starter.sh") )"
+if [ "$(uname -m)" = "aarch64" ]; then
+    FEX_EMU_CMD="$(command -v "fex-starter.sh" 2>/dev/null || true)"
+    [ -z "$FEX_EMU_CMD" ] && >&2 echo "FEX is not installed, but is required for ARM64. Please install it." && exit 1
+
+    if [ "$(cat /proc/sys/vm/overcommit_memory)" != "1" ]; then
+        if sysctl vm.overcommit_memory=1 >/dev/null 2>&1; then
+            if [ "$(cat /proc/sys/vm/overcommit_memory)" = "1" ]; then
+                >&2 echo "Enabled overcommit_memory for FEX"
+            else
+                >&2 echo "Set to enable overcommit_memory for FEX was not working, this may cause issues."
+            fi
+        else
+            >&2 echo "Failed to enable overcommit_memory for FEX, this may cause issues."
+        fi
+    else
+        >&2 echo "overcommit_memory is already enabled for FEX"
+    fi
+else
+    FEX_EMU_CMD=""
+fi
+
 if [ "$USE_ENHANCED" = "true" ]; then
 CFX_SERVER="/opt/cfx-server-enhanced"
 mkdir -p /txData && ln -sfn /txData $CFX_SERVER/txData || true
