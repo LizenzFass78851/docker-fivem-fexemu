@@ -6,7 +6,11 @@ services:
     image: ghcr.io/lizenzfass78851/docker-fivem-fexemu:latest
     container_name: fivem
     security_opt:
+      # If run FiveM Enhanced
       - seccomp:unconfined
+      # If run FiveM ARM64 EMU for e.g. RPi4
+      - systempaths=unconfined
+      - apparmor=unconfined
     restart: always
     stdin_open: true
     tty: true
