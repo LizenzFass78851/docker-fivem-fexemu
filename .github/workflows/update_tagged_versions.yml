@@ -145,6 +145,6 @@ jobs:
       - name: trigger build workflow
         if: steps.update_fivem.outputs.updated == 'true' || steps.update_fex-emu.outputs.updated == 'true' || steps.update_resources.outputs.updated == 'true'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.TRIGGER_WORKFLOW_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           gh workflow run docker-image.yml
